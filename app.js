@@ -6,7 +6,7 @@ const CONFIG = {
     supabaseUrl: 'https://gqwvfohnqjmtojgswkxg.supabase.co',
     supabaseKey: 'sb_publishable_cI8YfYSibBXVQKHoo1onhA_CC6Aq6AG',
     cloudinaryName: 'dy7sh940z',
-    cloudinaryPreset: 'ml_default',
+    cloudinaryPreset: 'alienchat',
     signalingUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'ws://localhost:8080'
         : 'wss://server-xyos.onrender.com'
@@ -984,16 +984,7 @@ function createToastContainer() {
     return div;
 }
 
-// Assuming CONFIG is defined elsewhere or needs to be defined.
-// Based on the instruction, we are modifying an existing CONFIG.
-// If CONFIG is not defined, this would be the place to define it.
-const CONFIG = {
-    cloudinaryName: 'your_cloudinary_cloud_name', // Placeholder, replace with actual name
-    cloudinaryPreset: 'alienchat',
-    signalingUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'ws://localhost:8080'
-        : 'wss://server-xyos.onrender.com'
-};
+// CONFIG removed - already defined at top of file
 
 function sendNotification(title, body) {
     if (Notification.permission === 'granted' && document.hidden) {
