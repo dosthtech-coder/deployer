@@ -1034,40 +1034,57 @@ async function startChat(targetUser) {
 }
 
 async function uploadToCloudinary(file) {
+    console.log('Starting Cloudinary Upload...');
+
     // Helper to upload with specific preset
     const uploadWithPreset = async (preset) => {
+        console.log(`Attempting upload with preset: "${preset}"...`);
         const formData = new FormData();
         formData.append('file', file);
         formData.append('upload_preset', preset);
 
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CONFIG.cloudinaryName}/auto/upload`, {
-            method: 'POST',
-            body: formData
-        });
-        return await res.json();
+        try {
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${CONFIG.cloudinaryName}/auto/upload`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            return { ok: res.ok, data };
+        } catch (err) {
+            return { ok: false, error: err };
+        }
     };
 
     try {
-        // Attempt 1: Configured Preset (ml_default)
-        let data = await uploadWithPreset(CONFIG.cloudinaryPreset);
+        // Attempt 1: Configured Preset (alienchat)
+        let result = await uploadWithPreset(CONFIG.cloudinaryPreset);
 
-        // Attempt 2: If 'whitelisted' error, try 'unsigned' preset
-        if (data.error && data.error.message.includes('whitelisted')) {
-            console.warn('Default preset failed. Trying "unsigned"...');
-            data = await uploadWithPreset('unsigned');
+        // Attempt 2: Fallback to 'ml_default' if not found or whitelisted error
+        if (!result.ok && (result.data?.error?.message?.includes('not found') || result.data?.error?.message?.includes('whitelisted'))) {
+            console.warn(`Preset "${CONFIG.cloudinaryPreset}" failed. Retrying with "ml_default"...`);
+            result = await uploadWithPreset('ml_default');
         }
 
-        if (data.error) {
-            console.error('Cloudinary Error:', data.error);
-            if (data.error.message.includes('whitelisted')) {
-                alert('⚠️ Cloudinary Error:\nUse "unsigned" preset or enable Unsigned Mode for "ml_default".\n\nCloudinary > Settings > Upload > Upload Presets');
+        // Attempt 3: Fallback to 'unsigned' as last resort
+        if (!result.ok && (result.data?.error?.message?.includes('not found') || result.data?.error?.message?.includes('whitelisted'))) {
+            console.warn('ml_default failed. Retrying with "unsigned"...');
+            result = await uploadWithPreset('unsigned');
+        }
+
+        if (!result.ok) {
+            console.error('Cloudinary Final Error:', result.data);
+            const msg = result.data?.error?.message || 'Unknown error';
+
+            if (msg.includes('whitelisted') || msg.includes('not found')) {
+                alert('⚠️ Cloudinary Configuration Error:\n\nThe system tried "alienchat", "ml_default", and "unsigned" presets but all failed.\n\nPlease go to Cloudinary Dashboard > Settings > Upload > Upload presets and ensure you have an "Unsigned" preset enabled called "ml_default" or "alienchat".');
             } else {
-                showToast(`Upload Failed: ${data.error.message}`, 'error');
+                showToast(`Upload Failed: ${msg}`, 'error');
             }
             return null;
         }
 
-        return data.secure_url;
+        console.log('Upload Success:', result.data.secure_url);
+        return result.data.secure_url;
     } catch (err) {
         console.error('Upload Exception:', err);
         showToast('Upload Network Error', 'error');
