@@ -589,72 +589,88 @@ async function createPeerConnection(targetUserId, isInitiator) {
     state.peerConnection.onconnectionstatechange = () => {
         console.log('Connection State:', state.peerConnection.connectionState);
         if (state.peerConnection.connectionState === 'disconnected') {
-            showToast('Connection lost', 'error');
+            showToast('Peer Disconnected', 'warning');
         } else if (state.peerConnection.connectionState === 'failed') {
-            showToast('Connection failed', 'error');
+            showToast('Connection Failed (Firewall/Network)', 'error');
             endCall();
         }
     };
 
     if (isInitiator) {
-        const offer = await state.peerConnection.createOffer();
-        await state.peerConnection.setLocalDescription(offer);
-        sendSignal('offer', {
-            targetUserId: targetUserId,
-            sourceUserId: state.user.id,
-            offer: offer
-        });
+        try {
+            const offer = await state.peerConnection.createOffer();
+            await state.peerConnection.setLocalDescription(offer);
+
+            console.log('Sending Offer to:', targetUserId);
+            sendSignal('offer', {
+                targetUserId: targetUserId,
+                sourceUserId: state.user.id,
+                offer: offer
+            });
+        } catch (e) {
+            console.error('Error creating offer:', e);
+            showToast('Failed to start call connection', 'error');
+            endCall();
+        }
     }
 }
 
 async function handleOffer(payload) {
-    if (!state.peerConnection) {
-        state.peerConnection = new RTCPeerConnection(rtcConfig);
-        state.candidateQueue = []; // Ensure clear
+    try {
+        if (!state.peerConnection) {
+            state.peerConnection = new RTCPeerConnection(rtcConfig);
+            state.candidateQueue = []; // Ensure clear
 
-        if (state.localStream) {
-            state.localStream.getTracks().forEach(track => {
-                state.peerConnection.addTrack(track, state.localStream);
-            });
+            if (state.localStream) {
+                state.localStream.getTracks().forEach(track => {
+                    state.peerConnection.addTrack(track, state.localStream);
+                });
+            }
+
+            state.peerConnection.ontrack = (event) => {
+                els.remoteVideo.srcObject = event.streams[0];
+            };
+
+            state.peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    const target = payload.sourceUserId || state.incomingCallData?.callerId;
+                    if (target) {
+                        sendSignal('candidate', {
+                            targetUserId: target,
+                            candidate: event.candidate
+                        });
+                    } else {
+                        console.error('No target ID for candidate');
+                    }
+                }
+            };
         }
 
-        state.peerConnection.ontrack = (event) => {
-            els.remoteVideo.srcObject = event.streams[0];
-        };
+        await state.peerConnection.setRemoteDescription(new RTCSessionDescription(payload.offer));
 
-        state.peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                // Ensure we reply to correct person (sender of offer)
-                const target = payload.sourceUserId || state.incomingCallData?.callerId;
-                if (target) {
-                    sendSignal('candidate', {
-                        targetUserId: target,
-                        candidate: event.candidate
-                    });
-                } else {
-                    console.error('No target ID for candidate');
-                }
-            }
-        };
-    }
+        // Process Buffered Candidates
+        while (state.candidateQueue.length > 0) {
+            const candidate = state.candidateQueue.shift();
+            try {
+                await state.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (e) { console.warn('Candidate error:', e); }
+        }
 
-    await state.peerConnection.setRemoteDescription(new RTCSessionDescription(payload.offer));
+        const answer = await state.peerConnection.createAnswer();
+        await state.peerConnection.setLocalDescription(answer);
 
-    // Process Buffered Candidates
-    while (state.candidateQueue.length > 0) {
-        const candidate = state.candidateQueue.shift();
-        await state.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-    }
-
-    const answer = await state.peerConnection.createAnswer();
-    await state.peerConnection.setLocalDescription(answer);
-
-    const target = payload.sourceUserId || state.incomingCallData?.callerId;
-    if (target) {
-        sendSignal('answer', {
-            targetUserId: target,
-            answer: answer
-        });
+        const target = payload.sourceUserId || state.incomingCallData?.callerId;
+        if (target) {
+            console.log('Sending Answer to:', target);
+            sendSignal('answer', {
+                targetUserId: target,
+                answer: answer
+            });
+        }
+    } catch (e) {
+        console.error('Handle Offer Error:', e);
+        showToast('Call negotiation failed', 'error');
+        endCall();
     }
 }
 

@@ -243,20 +243,27 @@ button:active {
    DASHBOARD
    ————————————————————————————————————————————— */
 #dashboard-screen {
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    height: 100%;
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
+    position: relative;
 }
 
 /* Sidebar */
 .sidebar {
     width: 340px;
+    height: 100%;
     display: flex;
     flex-direction: column;
     z-index: 10;
     border-right: 1px solid var(--border);
+    flex-shrink: 0;
+    /* Prevent shrinking */
+    background: var(--system-bg);
+    /* Ensure opacity */
 }
 
 .user-profile {
