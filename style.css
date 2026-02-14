@@ -1066,33 +1066,47 @@ button:active {
 
 /* Mobile Fixes */
 @media (max-width: 768px) {
+    .desktop-only {
+        display: none !important;
+    }
+
+    #app {
+        position: relative;
+    }
+
+    /* DEFAULT: Show Sidebar (User List), Hide Chat */
     .sidebar {
+        width: 100% !important;
+        position: absolute;
+        z-index: 20;
+        height: 100%;
+        display: flex !important;
+        transform: translateX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .chat-area {
         width: 100%;
         position: absolute;
         z-index: 10;
         height: 100%;
-    }
-
-    .sidebar.collapsed {
-        display: none;
-    }
-
-    /* Hide completely on mobile if collapsed/inactive */
-
-    .chat-area {
-        width: 100%;
-        z-index: 20;
-        position: absolute;
-        height: 100%;
         background: var(--system-bg);
+        transform: translateX(100%);
+        /* Push chat off-screen initially */
+        transition: transform 0.3s ease;
     }
 
-    .mobile-only {
-        display: flex !important;
+    /* STATE: Chat Active -> Slide Sidebar Left, Chat In */
+    body.chat-active .sidebar {
+        transform: translateX(-100%);
+        /* Slide sidebar out */
     }
 
-    .desktop-only {
-        display: none !important;
+    body.chat-active .chat-area {
+        transform: translateX(0);
+        /* Slide chat in */
+        z-index: 30;
+        /* Ensure on top */
     }
 
     /* Mobile Header Optimization */
@@ -1101,33 +1115,23 @@ button:active {
         gap: 0.5rem;
     }
 
-    .chat-partner-info {
-        min-width: 0;
-        /* Allow flex shrink */
+    /* Adjust placeholder to not block interaction if it somehow stays */
+    #chat-placeholder {
+        display: none !important;
+        /* Hide placeholder on mobile, show list instead */
     }
 
-    .chat-partner-info .meta {
-        overflow: hidden;
+    .chat-partner-info {
+        min-width: 0;
     }
 
     .chat-partner-info #chat-partner-name {
         font-size: 0.9rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .chat-partner-info .status-text {
-        font-size: 0.7rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 
     .action-btn {
         width: 36px;
         height: 36px;
-        padding: 6px;
     }
 
     #call-overlay {

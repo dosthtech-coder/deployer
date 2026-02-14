@@ -991,6 +991,11 @@ function sendNotification(title, body) {
 }
 
 // Send Message Helper Logic with Optimistic UI
+els.backBtn.addEventListener('click', () => {
+    document.body.classList.remove('chat-active');
+    state.activeChat = null;
+});
+
 async function startChat(targetUser) {
     state.activeChat = targetUser;
     els.chatPlaceholder.classList.add('hidden');
@@ -998,6 +1003,9 @@ async function startChat(targetUser) {
     els.chatPartnerName.textContent = targetUser.email;
     els.partnerAvatar.textContent = targetUser.email.substring(0, 2).toUpperCase();
     renderUserList();
+
+    // Mobile Transition
+    document.body.classList.add('chat-active');
 
     const { data: chats } = await supabaseClient.from('chats').select('*')
         .or(`and(user1_id.eq.${state.user.id},user2_id.eq.${targetUser.id}),and(user1_id.eq.${targetUser.id},user2_id.eq.${state.user.id})`);
@@ -1011,15 +1019,6 @@ async function startChat(targetUser) {
 
     state.currentChatId = chatId;
     fetchMessages(chatId);
-}
-
-async function fetchMessages(chatId) {
-    els.messagesContainer.innerHTML = '';
-    const { data } = await supabaseClient.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
-    if (data) {
-        data.forEach(msg => renderMessage(msg));
-        scrollToBottom();
-    }
 }
 
 async function uploadToCloudinary(file) {
@@ -1037,7 +1036,8 @@ async function uploadToCloudinary(file) {
         if (data.error) {
             console.error('Cloudinary Error:', data.error);
             if (data.error.message.includes('whitelisted')) {
-                showToast('Cloudinary Config Error: Enable Unsigned Uploads', 'error');
+                alert('⚠️ Cloudinary Error: "Upload preset must be whitelisted for unsigned uploads".\n\nFIX: Go to Cloudinary Settings -> Upload -> Upload Presets -> Edit "ml_default" -> Set "Signing Mode" to "Unsigned".');
+                showToast('Config Error: See Alert', 'error');
             } else {
                 showToast(`Upload Failed: ${data.error.message}`, 'error');
             }
