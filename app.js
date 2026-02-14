@@ -193,6 +193,56 @@ function openLightbox(src) {
 }
 
 // ——————————————————————————————————————————————————————————————————
+// PROFILE SETTINGS LOGIC
+// ——————————————————————————————————————————————————————————————————
+const profileSettings = document.getElementById('profile-settings');
+const closeProfileBtn = document.getElementById('close-profile-btn');
+const profileLogoutBtn = document.getElementById('profile-logout-btn');
+const clearCacheBtn = document.getElementById('clear-cache-btn');
+const exportDataBtn = document.getElementById('export-data-btn');
+
+// Open Profile
+els.myAvatar.addEventListener('click', () => {
+    profileSettings.classList.remove('hidden');
+    // Populate data
+    document.getElementById('profile-email-display').textContent = state.user.email;
+    document.getElementById('profile-email-masked').textContent = state.user.email.replace(/(.{2})(.*)(?=@)/,
+        (gp1, gp2, gp3) => gp2 + "*".repeat(gp3.length));
+    document.getElementById('profile-uid').textContent = state.user.id;
+    document.getElementById('profile-avatar-text').textContent = state.user.email.substring(0, 2).toUpperCase();
+});
+
+// Close Profile
+if (closeProfileBtn) {
+    closeProfileBtn.addEventListener('click', () => {
+        profileSettings.classList.add('hidden');
+    });
+}
+
+// Clear Cache
+if (clearCacheBtn) {
+    clearCacheBtn.addEventListener('click', () => {
+        if (confirm('Clear local app cache? This will refresh the application.')) {
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload(true);
+        }
+    });
+}
+
+// Export Data (Mock)
+if (exportDataBtn) {
+    exportDataBtn.addEventListener('click', () => {
+        alert('Data export feature coming in v1.1');
+    });
+}
+
+// Profile Logout
+if (profileLogoutBtn) {
+    profileLogoutBtn.addEventListener('click', handleLogout);
+}
+
+// ——————————————————————————————————————————————————————————————————
 // MEDIA PREVIEW LOGIC
 // ——————————————————————————————————————————————————————————————————
 els.attachBtn.addEventListener('click', () => els.mediaInput.click());
