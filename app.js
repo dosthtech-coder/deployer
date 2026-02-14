@@ -984,9 +984,30 @@ function createToastContainer() {
     return div;
 }
 
+// Assuming CONFIG is defined elsewhere or needs to be defined.
+// Based on the instruction, we are modifying an existing CONFIG.
+// If CONFIG is not defined, this would be the place to define it.
+const CONFIG = {
+    cloudinaryName: 'your_cloudinary_cloud_name', // Placeholder, replace with actual name
+    cloudinaryPreset: 'alienchat',
+    signalingUrl: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'ws://localhost:8080'
+        : 'wss://server-xyos.onrender.com'
+};
+
 function sendNotification(title, body) {
     if (Notification.permission === 'granted' && document.hidden) {
         new Notification(title, { body });
+    }
+}
+
+// Restore fetchMessages
+async function fetchMessages(chatId) {
+    els.messagesContainer.innerHTML = '';
+    const { data } = await supabaseClient.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
+    if (data) {
+        data.forEach(msg => renderMessage(msg));
+        scrollToBottom();
     }
 }
 
