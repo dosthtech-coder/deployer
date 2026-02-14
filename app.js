@@ -641,16 +641,31 @@ async function handleCallResponse(payload) {
 }
 
 async function createPeerConnection(targetUserId, isInitiator) {
+    console.log(`Creating PeerConnection (Initiator: ${isInitiator})`);
+
+    if (state.peerConnection) {
+        console.warn('Closing existing PeerConnection before creating new one.');
+        state.peerConnection.close();
+    }
+
     state.peerConnection = new RTCPeerConnection(rtcConfig);
 
-    state.localStream.getTracks().forEach(track => {
-        state.peerConnection.addTrack(track, state.localStream);
-    });
+    // Add local tracks
+    if (state.localStream) {
+        state.localStream.getTracks().forEach(track => {
+            state.peerConnection.addTrack(track, state.localStream);
+        });
+    }
 
+    // Handle Remote Stream
     state.peerConnection.ontrack = (event) => {
+        console.log('Remote Track Received');
         els.remoteVideo.srcObject = event.streams[0];
+        // Ensure audio plays
+        els.remoteVideo.play().catch(e => console.error('Auto-play failed:', e));
     };
 
+    // Handle ICE Candidates
     state.peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             sendSignal('candidate', {
@@ -660,19 +675,43 @@ async function createPeerConnection(targetUserId, isInitiator) {
         }
     };
 
+    // Connection State Monitoring
     state.peerConnection.onconnectionstatechange = () => {
-        console.log('Connection State:', state.peerConnection.connectionState);
-        if (state.peerConnection.connectionState === 'disconnected') {
-            showToast('Peer Disconnected', 'warning');
-        } else if (state.peerConnection.connectionState === 'failed') {
-            showToast('Connection Failed (Firewall/Network)', 'error');
-            endCall();
+        const connectionState = state.peerConnection.connectionState;
+        console.log('Connection State Change:', connectionState);
+
+        switch (connectionState) {
+            case 'connected':
+                els.callStatus.textContent = 'Connected (Secure)';
+                break;
+            case 'disconnected':
+                showToast('Peer Disconnected', 'warning');
+                break;
+            case 'failed':
+                showToast('Connection Failed (Network/Firewall)', 'error');
+                endCall();
+                break;
+            case 'closed':
+                console.log('PeerConnection Closed');
+                break;
+        }
+    };
+
+    // ICE Connection State (Granular)
+    state.peerConnection.oniceconnectionstatechange = () => {
+        console.log('ICE State:', state.peerConnection.iceConnectionState);
+        if (state.peerConnection.iceConnectionState === 'disconnected') {
+            showToast('Network unstable...', 'warning');
         }
     };
 
     if (isInitiator) {
         try {
-            const offer = await state.peerConnection.createOffer();
+            // Create Offer
+            const offer = await state.peerConnection.createOffer({
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: true
+            });
             await state.peerConnection.setLocalDescription(offer);
 
             console.log('Sending Offer to:', targetUserId);
@@ -681,6 +720,17 @@ async function createPeerConnection(targetUserId, isInitiator) {
                 sourceUserId: state.user.id,
                 offer: offer
             });
+
+            // Connection Timeout Protection (15 seconds)
+            setTimeout(() => {
+                if (state.peerConnection &&
+                    (state.peerConnection.connectionState === 'new' || state.peerConnection.connectionState === 'checking')) {
+                    console.error('Call Connection Update: Timeout');
+                    showToast('Call timed out. No response.', 'error');
+                    endCall();
+                }
+            }, 15000);
+
         } catch (e) {
             console.error('Error creating offer:', e);
             showToast('Failed to start call connection', 'error');
