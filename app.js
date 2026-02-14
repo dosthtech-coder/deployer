@@ -202,15 +202,18 @@ const clearCacheBtn = document.getElementById('clear-cache-btn');
 const exportDataBtn = document.getElementById('export-data-btn');
 
 // Open Profile
-els.myAvatar.addEventListener('click', () => {
-    profileSettings.classList.remove('hidden');
-    // Populate data
-    document.getElementById('profile-email-display').textContent = state.user.email;
-    document.getElementById('profile-email-masked').textContent = state.user.email.replace(/(.{2})(.*)(?=@)/,
-        (gp1, gp2, gp3) => gp2 + "*".repeat(gp3.length));
-    document.getElementById('profile-uid').textContent = state.user.id;
-    document.getElementById('profile-avatar-text').textContent = state.user.email.substring(0, 2).toUpperCase();
-});
+const avatarContainer = document.querySelector('.user-profile .avatar-container');
+if (avatarContainer) {
+    avatarContainer.addEventListener('click', () => {
+        profileSettings.classList.remove('hidden');
+        // Populate data
+        document.getElementById('profile-email-display').textContent = state.user.email;
+        document.getElementById('profile-email-masked').textContent = state.user.email.replace(/(.{2})(.*)(?=@)/,
+            (gp1, gp2, gp3) => gp2 + "*".repeat(gp3.length));
+        document.getElementById('profile-uid').textContent = state.user.id;
+        document.getElementById('profile-avatar-text').textContent = state.user.email.substring(0, 2).toUpperCase();
+    });
+}
 
 // Close Profile
 if (closeProfileBtn) {
@@ -811,13 +814,27 @@ async function handleCandidate(payload) {
     }
 }
 
+state.lastCallDuration = 0; // Track duration if needed
+
 els.hangupBtn.addEventListener('click', () => endCall(true));
 
-function endCall(emit = true) {
+async function endCall(emit = true) {
     if (state.callActive && emit && state.activeChat) {
         sendSignal('hangup', {
             targetUserId: state.activeChat.id
         });
+
+        // System Message: Call Ended
+        try {
+            await supabaseClient.from('messages').insert({
+                chat_id: state.currentChatId,
+                sender_id: state.user.id,
+                content: '📞 Call ended',
+                type: 'text' // Keeping it simple for now
+            });
+        } catch (err) {
+            console.error('Failed to log call end:', err);
+        }
     }
 
     state.callActive = false;
