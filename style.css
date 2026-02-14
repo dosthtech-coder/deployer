@@ -1095,6 +1095,41 @@ button:active {
         display: none !important;
     }
 
+    /* Mobile Header Optimization */
+    .chat-header {
+        padding: 0 0.8rem;
+        gap: 0.5rem;
+    }
+
+    .chat-partner-info {
+        min-width: 0;
+        /* Allow flex shrink */
+    }
+
+    .chat-partner-info .meta {
+        overflow: hidden;
+    }
+
+    .chat-partner-info #chat-partner-name {
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .chat-partner-info .status-text {
+        font-size: 0.7rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .action-btn {
+        width: 36px;
+        height: 36px;
+        padding: 6px;
+    }
+
     #call-overlay {
         bottom: 0;
         right: 0;

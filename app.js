@@ -169,6 +169,30 @@ if (els.sidebarToggleBtn) {
 }
 
 // ——————————————————————————————————————————————————————————————————
+// LIGHTBOX LOGIC
+// ——————————————————————————————————————————————————————————————————
+const lightbox = document.getElementById('lightbox-overlay');
+const lightboxImg = document.getElementById('lightbox-img');
+const lightboxClose = document.getElementById('lightbox-close');
+
+if (lightbox) {
+    lightboxClose.addEventListener('click', () => {
+        lightbox.classList.remove('active');
+    });
+
+    lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) lightbox.classList.remove('active');
+    });
+}
+
+function openLightbox(src) {
+    if (lightbox && lightboxImg) {
+        lightboxImg.src = src;
+        lightbox.classList.add('active');
+    }
+}
+
+// ——————————————————————————————————————————————————————————————————
 // MEDIA PREVIEW LOGIC
 // ——————————————————————————————————————————————————————————————————
 els.attachBtn.addEventListener('click', () => els.mediaInput.click());
@@ -998,15 +1022,57 @@ async function fetchMessages(chatId) {
     }
 }
 
+async function uploadToCloudinary(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CONFIG.cloudinaryPreset);
+
+    try {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CONFIG.cloudinaryName}/auto/upload`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.error) {
+            console.error('Cloudinary Error:', data.error);
+            if (data.error.message.includes('whitelisted')) {
+                showToast('Cloudinary Config Error: Enable Unsigned Uploads', 'error');
+            } else {
+                showToast(`Upload Failed: ${data.error.message}`, 'error');
+            }
+            return null;
+        }
+
+        return data.secure_url;
+    } catch (err) {
+        console.error('Upload Exception:', err);
+        showToast('Upload Network Error', 'error');
+        return null;
+    }
+}
+
+// ——————————————————————————————————————————————————————————————————
+// RENDER MESSAGES
+// ——————————————————————————————————————————————————————————————————
 function renderMessage(msg) {
     const div = document.createElement('div');
     const isMe = msg.sender_id === state.user.id;
     div.className = `message ${isMe ? 'sent' : 'received'}`;
 
     let contentHtml = msg.content;
-    if (msg.type === 'image') contentHtml = `<img src="${msg.content}" alt="Image" loading="lazy" style="max-width:200px; border-radius:8px;">`;
-    else if (msg.type === 'video') contentHtml = `<video src="${msg.content}" controls style="max-width:200px; border-radius:8px;"></video>`;
-    else if (msg.type === 'audio') contentHtml = `<audio src="${msg.content}" controls></audio>`;
+
+    // Media Types
+    if (msg.type === 'image') {
+        contentHtml = `<img src="${msg.content}" alt="Image" loading="lazy" 
+            style="max-width:200px; border-radius:8px; cursor:pointer;" 
+            onclick="openLightbox(this.src)">`;
+    } else if (msg.type === 'video') {
+        contentHtml = `<video src="${msg.content}" controls playsinline 
+            style="max-width:200px; border-radius:8px;"></video>`;
+    } else if (msg.type === 'audio') {
+        contentHtml = `<audio src="${msg.content}" controls style="width: 200px; height: 40px; border-radius: 20px;"></audio>`;
+    }
 
     div.innerHTML = `
         ${contentHtml}
