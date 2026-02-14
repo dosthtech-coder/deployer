@@ -1064,7 +1064,40 @@ button:active {
     justify-content: center;
 }
 
-/* Mobile Fixes */
+/* Emoji Picker (Grid Layout) - Critical Fix */
+#emoji-picker-container {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    padding: 10px;
+    height: 250px;
+    overflow-y: auto;
+    width: 300px;
+    background: rgba(10, 15, 25, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    position: absolute;
+    bottom: 80px;
+    left: 20px;
+    z-index: 100;
+}
+
+.emoji-btn {
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    border-radius: 8px;
+}
+
+.emoji-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile Fixes (Robust Display Logic) */
 @media (max-width: 768px) {
     .desktop-only {
         display: none !important;
@@ -1081,32 +1114,26 @@ button:active {
         z-index: 20;
         height: 100%;
         display: flex !important;
-        transform: translateX(0);
-        transition: transform 0.3s ease;
+        background: var(--system-bg);
     }
 
     .chat-area {
+        display: none !important;
+        /* Force hide by default */
         width: 100%;
-        position: absolute;
-        z-index: 10;
         height: 100%;
-        background: var(--system-bg);
-        transform: translateX(100%);
-        /* Push chat off-screen initially */
-        transition: transform 0.3s ease;
+        position: absolute;
+        z-index: 20;
+        /* Same z-index, visibility controlled by display */
     }
 
-    /* STATE: Chat Active -> Slide Sidebar Left, Chat In */
+    /* STATE: Chat Active -> Show Chat, Hide Sidebar */
     body.chat-active .sidebar {
-        transform: translateX(-100%);
-        /* Slide sidebar out */
+        display: none !important;
     }
 
     body.chat-active .chat-area {
-        transform: translateX(0);
-        /* Slide chat in */
-        z-index: 30;
-        /* Ensure on top */
+        display: flex !important;
     }
 
     /* Mobile Header Optimization */
@@ -1115,10 +1142,8 @@ button:active {
         gap: 0.5rem;
     }
 
-    /* Adjust placeholder to not block interaction if it somehow stays */
     #chat-placeholder {
         display: none !important;
-        /* Hide placeholder on mobile, show list instead */
     }
 
     .chat-partner-info {

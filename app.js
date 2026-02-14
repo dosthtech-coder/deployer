@@ -1022,22 +1022,33 @@ async function startChat(targetUser) {
 }
 
 async function uploadToCloudinary(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', CONFIG.cloudinaryPreset);
+    // Helper to upload with specific preset
+    const uploadWithPreset = async (preset) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', preset);
 
-    try {
         const res = await fetch(`https://api.cloudinary.com/v1_1/${CONFIG.cloudinaryName}/auto/upload`, {
             method: 'POST',
             body: formData
         });
-        const data = await res.json();
+        return await res.json();
+    };
+
+    try {
+        // Attempt 1: Configured Preset (ml_default)
+        let data = await uploadWithPreset(CONFIG.cloudinaryPreset);
+
+        // Attempt 2: If 'whitelisted' error, try 'unsigned' preset
+        if (data.error && data.error.message.includes('whitelisted')) {
+            console.warn('Default preset failed. Trying "unsigned"...');
+            data = await uploadWithPreset('unsigned');
+        }
 
         if (data.error) {
             console.error('Cloudinary Error:', data.error);
             if (data.error.message.includes('whitelisted')) {
-                alert('⚠️ Cloudinary Error: "Upload preset must be whitelisted for unsigned uploads".\n\nFIX: Go to Cloudinary Settings -> Upload -> Upload Presets -> Edit "ml_default" -> Set "Signing Mode" to "Unsigned".');
-                showToast('Config Error: See Alert', 'error');
+                alert('⚠️ Cloudinary Error:\nUse "unsigned" preset or enable Unsigned Mode for "ml_default".\n\nCloudinary > Settings > Upload > Upload Presets');
             } else {
                 showToast(`Upload Failed: ${data.error.message}`, 'error');
             }
