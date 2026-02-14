@@ -36,7 +36,12 @@ const state = {
 // WebRTC Configuration
 const rtcConfig = {
     iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' }
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' }
     ]
 };
 
@@ -582,8 +587,12 @@ async function createPeerConnection(targetUserId, isInitiator) {
     };
 
     state.peerConnection.onconnectionstatechange = () => {
+        console.log('Connection State:', state.peerConnection.connectionState);
         if (state.peerConnection.connectionState === 'disconnected') {
             showToast('Connection lost', 'error');
+        } else if (state.peerConnection.connectionState === 'failed') {
+            showToast('Connection failed', 'error');
+            endCall();
         }
     };
 
@@ -616,13 +625,14 @@ async function handleOffer(payload) {
         state.peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
                 // Ensure we reply to correct person (sender of offer)
-                // In payload, we patched to include sourceUserId
-                const target = payload.sourceUserId || state.incomingCallData.callerId;
+                const target = payload.sourceUserId || state.incomingCallData?.callerId;
                 if (target) {
                     sendSignal('candidate', {
                         targetUserId: target,
                         candidate: event.candidate
                     });
+                } else {
+                    console.error('No target ID for candidate');
                 }
             }
         };
@@ -639,11 +649,13 @@ async function handleOffer(payload) {
     const answer = await state.peerConnection.createAnswer();
     await state.peerConnection.setLocalDescription(answer);
 
-    const target = payload.sourceUserId || state.incomingCallData.callerId;
-    sendSignal('answer', {
-        targetUserId: target,
-        answer: answer
-    });
+    const target = payload.sourceUserId || state.incomingCallData?.callerId;
+    if (target) {
+        sendSignal('answer', {
+            targetUserId: target,
+            answer: answer
+        });
+    }
 }
 
 async function handleAnswer(payload) {
